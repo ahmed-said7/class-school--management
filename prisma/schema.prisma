@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  teacher
+  student
+  manager
+}
+
+model user {
+  id Int @id @default(autoincrement())
+  name String
+  email String @unique
+  password String
+  role UserType @default(student)
+  image String?
+  subjects subject[]
+  departmentId Int?
+  department department? @relation(fields: [departmentId],references: [id],onDelete: SetNull,onUpdate: Cascade)
+  grades subject_grade[]
+  passwordChangedAt DateTime?
+  passwordResetCode String?
+  passwordResetCodeExpiresIn DateTime?
+  reviews review[] @relation("instructor")
+  comments review[] @relation("user")
+  quiz quiz[]
+  ratingAvg Float @default(0)
+  ratingQuantity Float @default(0)
+}
+
+
+model subject {
+  id Int @id @default(autoincrement())
+  name String
+  image String
+  grade Int
+  department department @relation(fields: [departmentId],references: [id],onDelete: Cascade,onUpdate: Cascade)
+  departmentId Int
+  instructor user @relation( fields: [instructorId] , references: [id],onDelete: Cascade ,onUpdate: Cascade)
+  instructorId Int
+  grades subject_grade[]
+  questions question[]
+  quiz quiz[]
+}
+
+model department {
+  id Int @id @default(autoincrement())
+  name String
+  image String?
+  subjects subject[]
+  members user[]
+}
+
+model subject_grade {
+  // id Int @id @default(autoincrement())
+  userId Int 
+  user user @relation(fields: [userId],references: [id],onDelete: Cascade,onUpdate: Cascade)
+  subjectId Int
+  subject subject @relation(fields: [subjectId],references: [id],onDelete: Cascade,onUpdate: Cascade)
+  grade Int?
+  passed Boolean @default(false)
+  @@unique([userId,subjectId])
+  @@id([userId,subjectId])
+}
+
+model question {
+  id Int @id @default(autoincrement())
+  subjectId Int
+  subject subject @relation(fields: [subjectId],references: [id],onDelete: Cascade,onUpdate: Cascade)
+  correctAnswer String
+  answers String[]
+}
+
+model review {
+  userId Int
+  user user @relation("user",fields: [userId] , references: [id] , onDelete: Cascade , onUpdate: Cascade )
+  instructorId Int
+  instructor user @relation("instructor", fields: [instructorId] , references: [id] , onDelete: Cascade,onUpdate: Cascade )
+  rating Int
+  @@id([userId,instructorId])
+  @@unique([userId,instructorId])
+}
+
+model quiz {
+  id Int @id @default(autoincrement())
+  studentId Int
+  grade Int
+  subjectId Int
+  count Int
+  student user @relation( fields: [studentId],references: [id],onDelete: Cascade,onUpdate: Cascade)
+  subject subject @relation(references: [id],fields: [subjectId],onDelete: Cascade,onUpdate: Cascade)
+}
